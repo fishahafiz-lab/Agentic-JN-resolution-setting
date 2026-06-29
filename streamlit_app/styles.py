@@ -175,6 +175,19 @@ def inject_css():
         box-shadow: 0 4px 12px rgba(0,51,153,0.3) !important;
     }}
 
+    /* ── FILE UPLOADER — fix double "upload" text ───────────────── */
+    [data-testid="stFileUploader"] button span {{
+        display: none !important;
+    }}
+    section[data-testid="stFileUploadDropzone"] {{
+        border-radius: 12px !important;
+        border: 2px dashed {BORDER} !important;
+        padding: 1.5rem !important;
+    }}
+    section[data-testid="stFileUploadDropzone"]:hover {{
+        border-color: {PRIMARY} !important;
+    }}
+
     /* ── TABLES ──────────────────────────────────────────────────── */
     .jn-table {{
         width: 100% !important;

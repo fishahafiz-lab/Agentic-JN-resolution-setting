@@ -341,8 +341,11 @@ def page_hantar_payload():
         st.markdown('<div class="jn-card"><div class="jn-card-header">📄 Teks & Dokumen</div>', unsafe_allow_html=True)
         raw_text = st.text_area("Teks Aduan / Laporan *", height=200,
                                 placeholder="Masukkan teks laporan atau aduan...")
-        uploaded_file = st.file_uploader("Muat naik dokumen (DOCX/PDF/TXT)",
-                                         type=["txt", "docx", "pdf"])
+        st.caption("Muat naik dokumen (DOCX/PDF/TXT)")
+        uploaded_file = st.file_uploader(
+            "Muat naik dokumen", type=["txt", "docx", "pdf"],
+            label_visibility="collapsed"
+        )
         if uploaded_file:
             try:
                 if uploaded_file.name.endswith(".txt"):
