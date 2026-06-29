@@ -1,0 +1,9 @@
+[theme]
+primaryColor = "#003399"
+backgroundColor = "#F2F5F9"
+secondaryBackgroundColor = "#0D1B3E"
+textColor = "#1E1E1E"
+font = "Poppins"
+
+[browser]
+gatherUsageStats = false
