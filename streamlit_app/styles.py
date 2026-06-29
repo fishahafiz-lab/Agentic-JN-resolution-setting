@@ -17,6 +17,7 @@ PRIMARY       = "#003399"   # Malaysian gov blue
 PRIMARY_DARK  = "#002266"
 PRIMARY_LIGHT = "#E8EEF9"
 SIDEBAR_BG    = "#0A1628"   # deep navy
+STEEL_BLUE    = "#2B5278"   # branding accent (replaces crimson for non-danger)
 BG            = "#F0F2F6"
 CARD_BG       = "#FFFFFF"
 TEXT          = "#1A1A1A"
@@ -26,14 +27,23 @@ BORDER        = "#DADCE0"
 SUCCESS       = "#1E8E3E"
 WARNING       = "#F9AB00"
 DANGER        = "#D93025"
+CRIMSON       = "#C41E3A"   # danger ONLY — never branding
 ACCENT        = "#174EA6"
 
 DI_COLORS_CSS = {
-    "EXTREME_DISCREPANCY":  "#C62828",
-    "SEVERE_DISCREPANCY":   "#E65100",
-    "MODERATE_DISCREPANCY": "#F9AB00",
-    "MINOR_DISCREPANCY":    "#003399",
-    "DATA_ALIGNED":         "#1E8E3E",
+    "EXTREME DISCREPANCY":  "#C41E3A",
+    "SEVERE DISCREPANCY":   "#E65100",
+    "MODERATE DISCREPANCY": "#F9AB00",
+    "MINOR DISCREPANCY":    "#2B5278",
+    "DATA ALIGNED":         "#1E8E3E",
+}
+
+DI_ICONS = {
+    "EXTREME DISCREPANCY": "🔴",
+    "SEVERE DISCREPANCY":  "🟠",
+    "MODERATE DISCREPANCY": "🟡",
+    "MINOR DISCREPANCY":   "🔵",
+    "DATA ALIGNED":        "🟢",
 }
 
 
@@ -73,10 +83,12 @@ def inject_css():
     section[data-testid="stSidebar"] * {{
         color: #E8EAED !important;
     }}
-    section[data-testid="stSidebar"] button {{
-        color: #E8EAED !important;
-        border-radius: 8px !important;
-        transition: all 0.2s ease !important;
+    /* Active nav — steel blue, not crimson */
+    section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] label[data-selected="true"],
+    section[data-testid="stSidebar"] .stRadio label[data-selected="true"] {{
+        background: {STEEL_BLUE}22 !important;
+        border-left: 3px solid {STEEL_BLUE} !important;
+        border-radius: 0 8px 8px 0 !important;
     }}
     section[data-testid="stSidebar"] button:hover {{
         background: rgba(255,255,255,0.08) !important;
@@ -152,10 +164,10 @@ def inject_css():
         font-weight: 600 !important;
         letter-spacing: 0.02em !important;
     }}
-    .jn-badge-extreme  {{ background: #FDE8EC !important; color: #C62828 !important; }}
+    .jn-badge-extreme  {{ background: #FDE8EC !important; color: {CRIMSON} !important; }}
     .jn-badge-severe   {{ background: #FFF3E0 !important; color: #E65100 !important; }}
     .jn-badge-moderate {{ background: #FFF8E1 !important; color: #B45309 !important; }}
-    .jn-badge-minor    {{ background: #E8EEF9 !important; color: #003399 !important; }}
+    .jn-badge-minor    {{ background: #E8EEF9 !important; color: {STEEL_BLUE} !important; }}
     .jn-badge-aligned  {{ background: #E6F4EA !important; color: #1E8E3E !important; }}
 
     /* ── BUTTONS ────────────────────────────────────────────────── */
@@ -233,6 +245,116 @@ def inject_css():
     input:focus, textarea:focus {{
         border-color: {PRIMARY} !important;
         box-shadow: 0 0 0 3px rgba(0,51,153,0.10) !important;
+    }}
+
+    /* ── RISK SIGNAL BAR ────────────────────────────────────────── */
+    .jn-risk-bar {{
+        background: {CARD_BG} !important;
+        border-radius: 14px !important;
+        padding: 1rem 1.5rem !important;
+        margin-bottom: 1.25rem !important;
+        border: 1px solid {BORDER} !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 1.25rem !important;
+    }}
+    .jn-risk-bar.alert-high {{
+        border-left: 4px solid {CRIMSON} !important;
+        background: #FFF5F5 !important;
+    }}
+    .jn-risk-bar.alert-mid {{
+        border-left: 4px solid {WARNING} !important;
+        background: #FFFCF5 !important;
+    }}
+    .jn-risk-bar.alert-low {{
+        border-left: 4px solid {SUCCESS} !important;
+        background: #F5FFF7 !important;
+    }}
+    .jn-risk-gauge {{
+        font-size: 2rem !important;
+        font-weight: 800 !important;
+        min-width: 60px !important;
+    }}
+    .jn-risk-info {{
+        flex: 1 !important;
+    }}
+    .jn-risk-info .label {{
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+    }}
+    .jn-risk-info .summary {{
+        font-size: 0.85rem !important;
+        color: {TEXT_SEC} !important;
+    }}
+    .jn-risk-breakdown {{
+        display: flex !important;
+        gap: 0.75rem !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+    }}
+
+    /* ── DI MINIBAR (case log) ──────────────────────────────────── */
+    .jn-di-minibar {{
+        width: 80px !important;
+        height: 6px !important;
+        border-radius: 3px !important;
+        background: #E8EAED !important;
+        overflow: hidden !important;
+        display: inline-block !important;
+        vertical-align: middle !important;
+        margin-right: 0.5rem !important;
+    }}
+    .jn-di-minibar-fill {{
+        height: 100% !important;
+        border-radius: 3px !important;
+        transition: width 0.3s ease !important;
+    }}
+
+    /* ── FILTER CHIPS ───────────────────────────────────────────── */
+    .jn-filter-chips {{
+        display: flex !important;
+        gap: 0.5rem !important;
+        flex-wrap: wrap !important;
+        margin-bottom: 1rem !important;
+    }}
+    .jn-chip {{
+        padding: 0.35rem 0.85rem !important;
+        border-radius: 20px !important;
+        font-size: 0.8rem !important;
+        font-weight: 500 !important;
+        cursor: pointer !important;
+        border: 1.5px solid {BORDER} !important;
+        background: {CARD_BG} !important;
+        color: {TEXT_SEC} !important;
+        transition: all 0.15s ease !important;
+    }}
+    .jn-chip:hover {{
+        border-color: {STEEL_BLUE} !important;
+        color: {STEEL_BLUE} !important;
+    }}
+    .jn-chip.active {{
+        background: {STEEL_BLUE} !important;
+        color: #FFFFFF !important;
+        border-color: {STEEL_BLUE} !important;
+    }}
+
+    /* ── EMPTY STATES — purposeful icons, no emoji ──────────────── */
+    .jn-empty-state {{
+        text-align: center !important;
+        padding: 3rem 1.5rem !important;
+        color: {TEXT_MUTED} !important;
+    }}
+    .jn-empty-state .jn-empty-icon {{
+        font-size: 2.5rem !important;
+        margin-bottom: 0.75rem !important;
+        opacity: 0.5 !important;
+    }}
+    .jn-empty-state .jn-empty-text {{
+        font-size: 0.95rem !important;
+        font-weight: 500 !important;
+        color: {TEXT_SEC} !important;
     }}
 
     /* ── SIDEBAR LOGO ───────────────────────────────────────────── */
@@ -336,7 +458,7 @@ def stat_card(label: str, value, sub: str = "", color: str = None):
 
 
 def di_badge(classification: str):
-    """Render a DI classification badge."""
+    """Render a DI classification badge with severity icon."""
     mapping = {
         "EXTREME DISCREPANCY": "extreme",
         "SEVERE DISCREPANCY": "severe",
@@ -344,8 +466,16 @@ def di_badge(classification: str):
         "MINOR DISCREPANCY": "minor",
         "DATA ALIGNED": "aligned",
     }
+    icons = {
+        "EXTREME DISCREPANCY": "🔴",
+        "SEVERE DISCREPANCY": "🟠",
+        "MODERATE DISCREPANCY": "🟡",
+        "MINOR DISCREPANCY": "🔵",
+        "DATA ALIGNED": "🟢",
+    }
     cls = mapping.get(classification, "aligned")
-    st.markdown(f'<span class="jn-badge jn-badge-{cls}">{classification}</span>', unsafe_allow_html=True)
+    icon = icons.get(classification, "⚪")
+    st.markdown(f'<span class="jn-badge jn-badge-{cls}">{icon} {classification}</span>', unsafe_allow_html=True)
 
 
 def alert_box(text: str, kind: str = "info"):

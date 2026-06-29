@@ -21,7 +21,7 @@ from database import JNDatabase
 from styles import (
     inject_css, LOGO_DARK, LOGO_LIGHT,
     stat_card, di_badge, alert_box, render_sidebar_header, render_sidebar_footer,
-    PRIMARY, PRIMARY_DARK, SUCCESS, WARNING, DANGER, DI_COLORS_CSS,
+    PRIMARY, PRIMARY_DARK, STEEL_BLUE, SUCCESS, WARNING, DANGER, CRIMSON, DI_COLORS_CSS, DI_ICONS,
 )
 
 # ═══════════════════════════════════════════════════════════════════
@@ -47,10 +47,10 @@ DEFAULT_ADMIN_PASSWORD = "admin1234"
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 DI_COLORS = {
-    "EXTREME DISCREPANCY": "#C62828",
+    "EXTREME DISCREPANCY": "#C41E3A",
     "SEVERE DISCREPANCY": "#E65100",
     "MODERATE DISCREPANCY": "#F9AB00",
-    "MINOR DISCREPANCY": "#003399",
+    "MINOR DISCREPANCY": "#2B5278",
     "DATA ALIGNED": "#1E8E3E",
 }
 
@@ -241,6 +241,42 @@ def page_dashboard():
     avg_di = db.get_avg_di()
     di_summary = db.get_di_summary()
 
+    # ── Risk Signal Bar ──────────────────────────────────────────
+    if case_count > 0:
+        extreme = di_summary.get("EXTREME DISCREPANCY", 0)
+        severe = di_summary.get("SEVERE DISCREPANCY", 0)
+        moderate = di_summary.get("MODERATE DISCREPANCY", 0)
+        high_risk = extreme + severe
+        pct = round(high_risk / case_count * 100) if case_count else 0
+
+        if pct >= 40:
+            alert_class = "alert-high"; alert_label = "Tahap Amaran Tinggi"
+            gauge_color = CRIMSON
+        elif pct >= 15:
+            alert_class = "alert-mid"; alert_label = "Pemantauan Dipertingkatkan"
+            gauge_color = WARNING
+        else:
+            alert_class = "alert-low"; alert_label = "Situasi Terkawal"
+            gauge_color = SUCCESS
+
+        breakdown_items = []
+        if extreme: breakdown_items.append(f'<span style="color:{CRIMSON}">🔴 {extreme} Ekstrem</span>')
+        if severe: breakdown_items.append(f'<span style="color:#E65100">🟠 {severe} Teruk</span>')
+        if moderate: breakdown_items.append(f'<span style="color:#B45309">🟡 {moderate} Sederhana</span>')
+        aligned = di_summary.get("DATA ALIGNED", 0)
+        if aligned: breakdown_items.append(f'<span style="color:{SUCCESS}">🟢 {aligned} Selaras</span>')
+
+        st.markdown(f"""
+        <div class="jn-risk-bar {alert_class}">
+            <div class="jn-risk-gauge" style="color:{gauge_color}">{pct}%</div>
+            <div class="jn-risk-info">
+                <div class="label" style="color:{gauge_color}">⬤  {alert_label}</div>
+                <div class="summary">{high_risk} daripada {case_count} kes memerlukan tindakan</div>
+            </div>
+            <div class="jn-risk-breakdown">{' '.join(breakdown_items)}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
     # Stat cards row
     col1, col2, col3, col4 = st.columns(4, gap="medium")
     with col1:
@@ -277,7 +313,7 @@ def page_dashboard():
             fig.update_traces(texttemplate='%{y}', textposition='outside')
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         else:
-            st.info("Tiada data kes setakat ini.")
+            st.info("📈 Tiada data kes setakat ini.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_right:
@@ -314,7 +350,7 @@ def page_dashboard():
                          "Klasifikasi": st.column_config.TextColumn(width="medium"),
                      })
     else:
-        st.info("Belum ada kes diproses.")
+        st.info("📋 Belum ada kes diproses.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -446,61 +482,81 @@ def page_log_kes():
 
     cases = db.get_cases(limit=200)
     if not cases:
-        st.info("📭 Tiada kes direkodkan. Hantar payload untuk bermula.")
+        st.markdown("""
+        <div class="jn-empty-state">
+            <div class="jn-empty-icon">📋</div>
+            <div class="jn-empty-text">Tiada kes direkodkan</div>
+            <div style="font-size:0.8rem;color:#9AA0A6;margin-top:0.25rem;">Hantar payload untuk memulakan analisis</div>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        classifications = list(set(c["di_classification"] for c in cases))
-        filter_class = st.selectbox("Tapis Klasifikasi", ["Semua"] + sorted(classifications))
-    with col2:
-        states = list(set(c["state"] for c in cases if c["state"]))
-        filter_state = st.selectbox("Tapis Negeri", ["Semua"] + sorted(states))
-    with col3:
-        search_term = st.text_input("Cari Sekolah / Case ID", placeholder="Taip untuk mencari...")
+    # ── Filter Chips ──────────────────────────────────────────────
+    all_classes = sorted(set(c["di_classification"] for c in cases))
+    if "filter_class" not in st.session_state:
+        st.session_state["filter_class"] = "Semua"
+    if "filter_search" not in st.session_state:
+        st.session_state["filter_search"] = ""
 
+    st.markdown('<div class="jn-filter-chips">', unsafe_allow_html=True)
+    # "Semua" chip
+    active_all = " active" if st.session_state["filter_class"] == "Semua" else ""
+    if st.button("Semua", key="chip_all", help="Tunjukkan semua klasifikasi"):
+        st.session_state["filter_class"] = "Semua"
+        st.rerun()
+    # Classification chips
+    for cls in all_classes:
+        icon = DI_ICONS.get(cls, "⚪")
+        short = cls.replace(" DISCREPANCY", "")
+        active = " active" if st.session_state["filter_class"] == cls else ""
+        if st.button(f"{icon} {short}", key=f"chip_{cls}", help=f"Tapis {cls}"):
+            st.session_state["filter_class"] = cls
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Search
+    search_term = st.text_input(
+        "Cari Sekolah / Case ID", placeholder="Taip untuk mencari...",
+        key="filter_search_input", label_visibility="collapsed"
+    )
+
+    # Apply filters
     filtered = cases
-    if filter_class != "Semua":
-        filtered = [c for c in filtered if c["di_classification"] == filter_class]
-    if filter_state != "Semua":
-        filtered = [c for c in filtered if c["state"] == filter_state]
+    if st.session_state["filter_class"] != "Semua":
+        filtered = [c for c in filtered if c["di_classification"] == st.session_state["filter_class"]]
     if search_term:
         q = search_term.lower()
         filtered = [c for c in filtered if q in c.get("school_name", "").lower() or q in c.get("case_id", "").lower()]
 
-    st.caption(f"Menunjukkan {len(filtered)} / {len(cases)} kes")
+    st.caption(f"Menunjukkan {len(filtered)} daripada {len(cases)} kes  •  Tersusun: terbaharu dahulu")
 
-    # Build dataframe for native Streamlit table
-    display_data = []
-    for c in filtered:
+    # ── Case table with DI minibar ────────────────────────────────
+    import math
+    for idx, c in enumerate(filtered):
         di_val = c["discrepancy_index"] or 0
         di_class = c["di_classification"] or "DATA ALIGNED"
-        display_data.append({
-            "Case ID": c["case_id"],
-            "Sekolah": c["school_name"],
-            "Negeri": c["state"],
-            "Skor Audit": f"{c['audit_score_reference']:.1f}" if c['audit_score_reference'] else "-",
-            "Skor Lapor": f"{c['operational_score_reported']:.1f}" if c['operational_score_reported'] else "-",
-            "Δ": f"{c['score_delta']:.1f}" if c['score_delta'] else "-",
-            "DI": di_val,
-            "Klasifikasi": di_class,
-            "Masa": c["timestamp"][:16] if c["timestamp"] else "-",
-        })
+        icon = DI_ICONS.get(di_class, "⚪")
+        color = DI_COLORS.get(di_class, "#999")
+        bar_pct = min(100, int(di_val * 100))
+        anomaly_badge = "⚠️ YA" if c.get("anomaly_detected") else "✅ TIDAK"
+        ts = c["timestamp"][:16] if c["timestamp"] else "-"
 
-    df = pd.DataFrame(display_data)
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "DI": st.column_config.NumberColumn("DI", format="%.4f"),
-            "Klasifikasi": st.column_config.TextColumn("Klasifikasi", width="medium"),
-        },
-    )
+        st.markdown(f"""
+        <div class="jn-card" style="padding:0.85rem 1.25rem;margin-bottom:0.5rem;display:flex;align-items:center;gap:1rem;font-size:0.88rem;">
+            <div style="min-width:140px;font-weight:500;font-size:0.82rem;color:{TEXT_SEC};">{c['case_id']}</div>
+            <div style="flex:1;min-width:160px;font-weight:600;">{c['school_name']}</div>
+            <div style="min-width:100px;">{icon} <span style="color:{color};font-weight:600;">{di_class.replace(' DISCREPANCY','')}</span></div>
+            <div style="min-width:120px;display:flex;align-items:center;gap:0.4rem;">
+                <div class="jn-di-minibar"><div class="jn-di-minibar-fill" style="width:{bar_pct}%;background:{color};"></div></div>
+                <span style="font-weight:700;color:{color};">{di_val:.4f}</span>
+            </div>
+            <div style="min-width:60px;font-size:0.8rem;">{anomaly_badge}</div>
+            <div style="min-width:100px;font-size:0.78rem;color:{TEXT_MUTED};">{ts}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # Export
-    if st.button("📥 Eksport CSV", use_container_width=False):
+    if st.button("📥 Eksport CSV", key="export_csv"):
         export_df = pd.DataFrame([{
             "case_id": c["case_id"], "school_name": c["school_name"], "state": c["state"],
             "audit_score": c["audit_score_reference"], "operational_score": c["operational_score_reported"],
@@ -516,7 +572,13 @@ def page_ringkasan_eksekutif():
 
     cases = db.get_cases(limit=200)
     if not cases:
-        st.info("Tiada kes untuk dipapar.")
+        st.markdown("""
+        <div class="jn-empty-state">
+            <div class="jn-empty-icon">📄</div>
+            <div class="jn-empty-text">Tiada kes untuk dipapar</div>
+            <div style="font-size:0.8rem;color:#9AA0A6;margin-top:0.25rem;">Hantar payload untuk menjana ringkasan eksekutif</div>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
     case_ids = [c["case_id"] for c in cases]
