@@ -303,7 +303,7 @@ def render_sidebar_header():
 def render_sidebar_footer():
     """Render sidebar footer with version info."""
     st.markdown("""
-    <div style="position:fixed;bottom:1rem;left:1rem;font-size:0.7rem;color:#9AA0A6;">
+    <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.1);font-size:0.7rem;color:#9AA0A6;">
     JN Resolusi v2.0 · PRESTIJ-25<br>
     © 2025 KPM Jemaah Nazir
     </div>

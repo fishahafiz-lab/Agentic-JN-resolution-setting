@@ -139,8 +139,8 @@ def render_sidebar():
 
             st.divider()
 
-            # Navigation
-            pages = {
+            # Navigation — radio for stable sidebar (no collapse)
+            page_options = {
                 "📊  Dashboard": "Dashboard",
                 "📤  Hantar Payload": "Hantar Payload",
                 "📋  Log Kes": "Log Kes",
@@ -148,14 +148,20 @@ def render_sidebar():
                 "📁  Muat Naik CSV": "Muat Naik CSV",
             }
             if _role_is_admin(role):
-                pages["👥  Pengurusan Pengguna"] = "Pengurusan Pengguna"
-            pages["ℹ️  Maklumat Sistem"] = "Maklumat Sistem"
+                page_options["👥  Pengurusan Pengguna"] = "Pengurusan Pengguna"
+            page_options["ℹ️  Maklumat Sistem"] = "Maklumat Sistem"
 
-            for label, page_id in pages.items():
-                if st.sidebar.button(label, key=f"nav_{page_id}", use_container_width=True,
-                                     type="secondary" if st.session_state.get("page") != page_id else "primary"):
-                    st.session_state["page"] = page_id
-                    st.rerun()
+            current_page = st.session_state.get("page", "Dashboard")
+            labels = list(page_options.keys())
+            values = list(page_options.values())
+            default_idx = values.index(current_page) if current_page in values else 0
+            selected = st.sidebar.radio(
+                "Navigasi", labels,
+                index=default_idx,
+                key="nav_radio",
+                label_visibility="collapsed",
+            )
+            st.session_state["page"] = page_options[selected]
 
             st.divider()
 
@@ -236,17 +242,21 @@ def page_dashboard():
     di_summary = db.get_di_summary()
 
     # Stat cards row
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4, gap="medium")
     with col1:
-        stat_card("Jumlah Kes", str(case_count), "kes direkodkan", PRIMARY)
+        with st.container():
+            stat_card("Jumlah Kes", str(case_count), "kes direkodkan", PRIMARY)
     with col2:
-        stat_card("Purata DI", f"{avg_di:.4f}", "Discrepancy Index", WARNING)
+        with st.container():
+            stat_card("Purata DI", f"{avg_di:.4f}", "Discrepancy Index", WARNING)
     with col3:
-        extreme = di_summary.get("EXTREME DISCREPANCY", 0)
-        stat_card("Kritikal", str(extreme), "kes EXTREME", DANGER)
+        with st.container():
+            extreme = di_summary.get("EXTREME DISCREPANCY", 0)
+            stat_card("Kritikal", str(extreme), "kes EXTREME", DANGER)
     with col4:
-        aligned = di_summary.get("DATA ALIGNED", 0)
-        stat_card("Selaras", str(aligned), "kes aligned", SUCCESS)
+        with st.container():
+            aligned = di_summary.get("DATA ALIGNED", 0)
+            stat_card("Selaras", str(aligned), "kes aligned", SUCCESS)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -458,26 +468,33 @@ def page_log_kes():
 
     st.caption(f"Menunjukkan {len(filtered)} / {len(cases)} kes")
 
-    # Build display table
-    rows = []
+    # Build dataframe for native Streamlit table
+    display_data = []
     for c in filtered:
         di_val = c["discrepancy_index"] or 0
         di_class = c["di_classification"] or "DATA ALIGNED"
-        color = DI_COLORS.get(di_class, "#999")
-        rows.append({
+        display_data.append({
             "Case ID": c["case_id"],
             "Sekolah": c["school_name"],
             "Negeri": c["state"],
             "Skor Audit": f"{c['audit_score_reference']:.1f}" if c['audit_score_reference'] else "-",
             "Skor Lapor": f"{c['operational_score_reported']:.1f}" if c['operational_score_reported'] else "-",
             "Δ": f"{c['score_delta']:.1f}" if c['score_delta'] else "-",
-            "DI": f"<span style='color:{color};font-weight:700;'>{di_val:.4f}</span>",
-            "Klasifikasi": f"<span style='color:{color};font-weight:600;'>{di_class}</span>",
+            "DI": di_val,
+            "Klasifikasi": di_class,
             "Masa": c["timestamp"][:16] if c["timestamp"] else "-",
         })
 
-    df = pd.DataFrame(rows)
-    st.write(df.to_html(escape=False, index=False), unsafe_allow_html=True)
+    df = pd.DataFrame(display_data)
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "DI": st.column_config.NumberColumn("DI", format="%.4f"),
+            "Klasifikasi": st.column_config.TextColumn("Klasifikasi", width="medium"),
+        },
+    )
 
     # Export
     if st.button("📥 Eksport CSV", use_container_width=False):
